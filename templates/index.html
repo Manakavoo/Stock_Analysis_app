@@ -18,7 +18,7 @@
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold text-gray-800 dark:text-white">Technical Analysis</h1>
             <div class="flex items-center space-x-4">
-                <select id="indexSelect" name="index" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 appearance-none">
+                <select id="indexSelect" title="Choose a stock" name="index" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 appearance-none">
                     <option value="^NSEI">NIFTY 50</option>
                     <option value="^BSESN">SENSEX</option>
                 </select>
@@ -45,19 +45,20 @@
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Technical Chart</h2>
                 <div class="flex space-x-2">
-                    <input type="date" id="startDate" label="startDate"class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">
-                    <input type="date" id="endDate" label="endDate" class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">
+                    <!-- <input type="date" id="startDate" label="startDate" aria-label="startDate" class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">
+                    <input type="date" id="endDate" label="endDate" aria-label="endDate" class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white"> -->
                     <!-- <label for="indexSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Select Time Period:
-                    </label>                    <select id="indexSelect" name="index" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 appearance-none">
+                    </label>                  -->
+                       <select id="indexSelect1" title="Choose a stock" name="index" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 appearance-none">
                         <option value="1mo">1 month</option>
-                        <option value="2mo">3 month</option>
+                        <option value="3mo" selected>3 month</option>
                         <option value="6mo">6 month</option>
                         <option value="1y">1 years</option>
                         <option value="2y">2 years</option>
                         <option value="5y"> 5 years</option>
-                    </select> -->
-                    <button id="applyFilter" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Apply</button>
+                    </select>
+                    <!-- <button id="applyFilter" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Apply</button> -->
                 </div>
             </div>
             <div id="stockChart" class="w-full h-96"></div>
@@ -66,6 +67,10 @@
 
         <!-- Metrics & Parameters Section -->
         <div class="space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Best Parameters</h2>
+                <div id="parameters" class="space-y-3 text-gray-700 dark:text-gray-300"></div>
+            </div>
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
                 <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Key Metrics</h2>
                 <div id="metrics" class="space-y-3 text-gray-700 dark:text-gray-300">
@@ -77,10 +82,7 @@
                     <p>Trend: <span id="trend" class="font-semibold">-</span></p>
                 </div>
             </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Best Parameters</h2>
-                <div id="parameters" class="space-y-3 text-gray-700 dark:text-gray-300"></div>
-            </div>
+            
         </div>
     </div>
 
@@ -191,7 +193,7 @@
         // }
 
         // Fetch Stock Data from Backend API
-        async function fetchStockData(index, startDate, endDate) {
+        async function fetchStockData(index,timeframe) {
             try {
                 // Construct the API URL with query parameters
                 // const apiUrl = new URL('http://localhost:8000/');
@@ -208,8 +210,9 @@
                 
                 const apiUrl = new URL('http://127.0.0.1:8000/');
                 apiUrl.searchParams.append('index', index);
-                if (startDate) apiUrl.searchParams.append('startDate', startDate);
-                if (endDate) apiUrl.searchParams.append('endDate', endDate);
+                // if (startDate) apiUrl.searchParams.append('startDate', startDate);
+                // if (endDate) apiUrl.searchParams.append('endDate', endDate);
+                if (timeframe) apiUrl.searchParams.append('timeframe', timeframe);
 
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -255,15 +258,19 @@
 
         // Index Selection & Date Filter
         document.getElementById('indexSelect').addEventListener('change', (e) => updateData());
-        document.getElementById('applyFilter').addEventListener('click', () => updateData());
+        document.getElementById('indexSelect1').addEventListener('change', (e) => updateData());
+        // document.getElementById('applyFilter').addEventListener('click', () => updateData());
         function updateData() {
-            // const index = document.getElementById('indexSelect').value;
-            const index = "^NSEI"
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            fetchStockData(index, startDate, endDate);
+            const index = document.getElementById('indexSelect').value;
+            // const index = "^NSEI"
+            // const startDate = document.getElementById('startDate').value;
+            // const endDate = document.getElementById('endDate').value;
+            const timeframe= document.getElementById('indexSelect1').value;
+
+            fetchStockData(index, timeframe);
         }
-        fetchStockData('^NSEI'); // Initial fetch
+        // fetchStockData('^NSEI'); // Initial fetch
+        updateData();
 
         // Indicator Toggle
         function toggleIndicator(indicator) {

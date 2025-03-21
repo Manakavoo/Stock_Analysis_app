@@ -67,8 +67,8 @@ def calculate_updated_rsi(prices, avg_gain, avg_loss, period=14):
 
         rs = updated_avg_gain.iloc[i] / updated_avg_loss.iloc[i] if updated_avg_loss.iloc[i] != 0 else 0
         rsi_values.iloc[i] = 100 - (100 / (1 + rs)) if updated_avg_loss.iloc[i] != 0 else 100
-
-    return rsi_values
+    print(type(rsi_values))
+    return rsi_values.round(2)
 
 # Helper function to calculate MACD
 def calculate_macd(prices, fast_period=12, slow_period=26, signal_period=9):
@@ -79,15 +79,15 @@ def calculate_macd(prices, fast_period=12, slow_period=26, signal_period=9):
     return macd, signal
 
 @app.get("/", response_model=StockDataResponse)
-async def get_all_data(index: str = "^NSEI", start_date: Optional[str] = None, end_date: Optional[str] = None):
+async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_date: Optional[str] = None, end_date: Optional[str] = None):
     print("index",index)
     try:
         # Fetch data from Yahoo Finance
         ticker = yf.Ticker(f"{index}")  # Use .NS for NSE (Indian market)
-        if not start_date or not end_date :
-            start_date = "2025-01-01"
-            end_date = "2025-03-01"
-        data = ticker.history(period="6mo" , interval="1d")
+        # if not start_date or not end_date :
+        #     start_date = "2025-01-01"
+        #     end_date = "2025-03-01"
+        data = ticker.history(period=timeframe , interval="1d")
         #         end_date = datetime.now().strftime("%Y-%m-%d")
         #         start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
         # data = ticker.history(start=start_date, end=end_date, interval="1d")
@@ -117,7 +117,7 @@ async def get_all_data(index: str = "^NSEI", start_date: Optional[str] = None, e
         # rsi = calculate_rsi(data['Close'].values)
         initial_rsi, avg_gain, avg_loss = calculate_initial_rsi(prices, rsi_period)
         rsi = calculate_updated_rsi(prices, avg_gain, avg_loss, rsi_period)
-      
+    
         rsi_data = [{"x": date.strftime("%Y-%m-%d"), "y": rsi[i]} for i, date in enumerate(data.index)]
 
         # Calculate MACD
@@ -129,6 +129,17 @@ async def get_all_data(index: str = "^NSEI", start_date: Optional[str] = None, e
             {"duration": "1 Day", "rsi": 14, "macd": "12,26,9", "profit": 15.5},
             {"duration": "3 Days", "rsi": 14, "macd": "12,26,9", "profit": 18.2}
         ]
+
+        # print("Open Price:", type(open_price))
+        # print("High Price:", type(high_price))
+        # print("Low Price:", type(low_price))
+        # print("Close Price:", type(close_price))
+        # print("Volume:", type(volume))
+        # print("Trend:", type(trend))
+        # print("Candlestick:", type(candlestick))
+        # print("RSI Data:", type(rsi_data))
+        # print("MACD Data:", type(macd_data))
+        # print("Parameters:", type(parameters))
 
         # Return the response
         return {

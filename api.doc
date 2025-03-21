@@ -1,0 +1,49 @@
+Endpoint '/'
+
+Request 
+Get 
+{
+    index:"^NSEI",
+    startDate:"2025-01-01",
+    endDate:"2025-03-01"
+}
+
+Response
+{
+    "open": 22500.50,
+    "high": 22650.75,
+    "low": 22450.20,
+    "close": 22580.30,
+    "volume": 1250000,
+    "trend": "Bullish",
+    "candlestick": [
+        { "x": "2023-10-01", "y": [22500, 22600, 22400, 22550] },
+        { "x": "2023-10-02", "y": [22550, 22650, 22450, 22600] }
+    ],
+    "rsi": [
+        { "x": "2023-10-01", "y": 50 },
+        { "x": "2023-10-02", "y": 55 }
+    ],
+    "macd": [
+        { "x": "2023-10-01", "y": 10 },
+        { "x": "2023-10-02", "y": 12 }
+    ],
+    "parameters": [
+        { "duration": "1 Day", "rsi": 14, "macd": "12,26,9", "profit": 15.5 },
+        { "duration": "3 Days", "rsi": 14, "macd": "12,26,9", "profit": 18.2 }
+    ]
+}
+
+
+Response Data type
+
+Open Price: <class 'numpy.float64'>
+High Price: <class 'numpy.float64'>
+Low Price: <class 'numpy.float64'>
+Close Price: <class 'numpy.float64'>
+Volume: <class 'numpy.int64'>
+Trend: <class 'str'>
+Candlestick: <class 'list'>
+RSI Data: <class 'list'>
+MACD Data: <class 'list'>
+Parameters: <class 'list'>
