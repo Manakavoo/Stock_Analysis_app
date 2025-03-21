@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Market Technical Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        .dark ::-webkit-scrollbar { width: 8px; }
+        .dark ::-webkit-scrollbar-track { background: #1f2937; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Navbar -->
+    <nav class="bg-white dark:bg-gray-800 shadow-lg p-4 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-gray-800 dark:text-white">Technical Analysis</h1>
+            <div class="flex items-center space-x-4">
+                <select id="indexSelect" name="index" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 appearance-none">
+                    <option value="^NSEI">NIFTY 50</option>
+                    <option value="^BSESN">SENSEX</option>
+                </select>
+                <input type="text" id="symbolInput" class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white" placeholder="Enter Stock Symbol">                
+                <div class="relative">
+                    <button id="analyticsMenu" class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">Analytics ▼</button>
+                    <div id="analyticsDropdown" class="hidden absolute top-12 right-0 w-48 bg-white dark:bg-gray-800 shadow-lg rounded-md p-2">
+                        <button class="block w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700" onclick="toggleIndicator('RSI')">RSI</button>
+                        <button class="block w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700" onclick="toggleIndicator('MACD')">MACD</button>
+                    </div>
+                </div>
+                <button id="themeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                    <span class="dark:hidden">🌙</span>
+                    <span class="hidden dark:inline">☀️</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart Section -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Technical Chart</h2>
+                <div class="flex space-x-2">
+                    <input type="date" id="startDate" label="startDate"class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">
+                    <input type="date" id="endDate" label="endDate" class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">
+                    <!-- <label for="indexSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Select Time Period:
+                    </label>                    <select id="indexSelect" name="index" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 appearance-none">
+                        <option value="1mo">1 month</option>
+                        <option value="2mo">3 month</option>
+                        <option value="6mo">6 month</option>
+                        <option value="1y">1 years</option>
+                        <option value="2y">2 years</option>
+                        <option value="5y"> 5 years</option>
+                    </select> -->
+                    <button id="applyFilter" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Apply</button>
+                </div>
+            </div>
+            <div id="stockChart" class="w-full h-96"></div>
+            <div id="indicatorChart" class="w-full h-48 mt-4 hidden"></div>
+        </div>
+
+        <!-- Metrics & Parameters Section -->
+        <div class="space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Key Metrics</h2>
+                <div id="metrics" class="space-y-3 text-gray-700 dark:text-gray-300">
+                    <p>Open: <span id="openPrice">-</span></p>
+                    <p>High: <span id="highPrice">-</span></p>
+                    <p>Low: <span id="lowPrice">-</span></p>
+                    <p>Close: <span id="closePrice">-</span></p>
+                    <p>Volume: <span id="volume">-</span></p>
+                    <p>Trend: <span id="trend" class="font-semibold">-</span></p>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Best Parameters</h2>
+                <div id="parameters" class="space-y-3 text-gray-700 dark:text-gray-300"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chatbot -->
+    <div id="chatbotContainer" class="fixed bottom-4 right-4 z-20">
+        <button id="chatbotToggle" class="bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition">💬</button>
+        <div id="chatbotBox" class="hidden absolute bottom-16 right-0 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 transform transition-all duration-300 scale-0 origin-bottom-right">
+            <div class="h-64 overflow-y-auto mb-4 p-2" id="chatMessages"></div>
+            <div class="flex space-x-2">
+                <input id="chatInput" type="text" class="flex-1 p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white" placeholder="Ask about technicals...">
+                <button id="chatSend" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+            updateChartTheme();
+        });
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
+
+        // Analytics Menu
+        const analyticsMenu = document.getElementById('analyticsMenu');
+        const analyticsDropdown = document.getElementById('analyticsDropdown');
+        analyticsMenu.addEventListener('click', () => analyticsDropdown.classList.toggle('hidden'));
+
+        // Chart Initialization
+        const candlestickOptions = {
+            chart: { type: 'candlestick', height: 350, animations: { enabled: true } },
+            series: [{ data: [] }],
+            xaxis: { type: 'datetime' },
+            yaxis: { tooltip: { enabled: true } },
+            theme: { mode: 'light' }
+        };
+        const indicatorOptions = {
+            chart: { type: 'line', height: 200, animations: { enabled: true } },
+            series: [],
+            xaxis: { type: 'datetime' },
+            theme: { mode: 'light' }
+        };
+        const candlestickChart = new ApexCharts(document.querySelector("#stockChart"), candlestickOptions);
+        const indicatorChart = new ApexCharts(document.querySelector("#indicatorChart"), indicatorOptions);
+        candlestickChart.render();
+        indicatorChart.render();
+
+        let activeIndicator = null;
+
+        // Fetch Stock Data (Mocked)
+
+        // async function fetchStockData(index, startDate, endDate) {
+
+        //     const mockData = {
+        //         open: 22500.50, high: 22650.75, low: 22450.20, close: 22580.30, volume: 1250000,
+        //         trend: 'Bullish',
+        //         candlestick: Array(30).fill().map((_, i) => ({
+        //             x: new Date(Date.now() - i * 24 * 60 * 60 * 1000),
+        //             y: [22500 + i * 10, 22600 + i * 12, 22400 + i * 8, 22550 + i * 11]
+        //         })).reverse(),
+        //         rsi: Array(30).fill().map((_, i) => ({ x: new Date(Date.now() - i * 24 * 60 * 60 * 1000), y: 50 + Math.sin(i / 5) * 20 })),
+        //         macd: Array(30).fill().map((_, i) => ({ x: new Date(Date.now() - i * 24 * 60 * 60 * 1000), y: Math.cos(i / 5) * 10 }))
+        //     };
+
+
+
+        //     // Update Metrics
+        //     document.getElementById('openPrice').textContent = mockData.open.toFixed(2);
+        //     document.getElementById('highPrice').textContent = mockData.high.toFixed(2);
+        //     document.getElementById('lowPrice').textContent = mockData.low.toFixed(2);
+        //     document.getElementById('closePrice').textContent = mockData.close.toFixed(2);
+        //     document.getElementById('volume').textContent = mockData.volume.toLocaleString();
+        //     document.getElementById('trend').textContent = mockData.trend;
+        //     document.getElementById('trend').className = `font-semibold ${mockData.trend === 'Bullish' ? 'text-green-500' : 'text-red-500'}`;
+
+        //     // Update Candlestick Chart
+        //     candlestickChart.updateSeries([{ data: mockData.candlestick }]);
+
+        //     // Update Indicator Chart
+        //     if (activeIndicator === 'RSI') {
+        //         indicatorChart.updateSeries([{ name: 'RSI', data: mockData.rsi }]);
+        //         document.getElementById('indicatorChart').classList.remove('hidden');
+        //     } else if (activeIndicator === 'MACD') {
+        //         indicatorChart.updateSeries([{ name: 'MACD', data: mockData.macd }]);
+        //         document.getElementById('indicatorChart').classList.remove('hidden');
+        //     } else {
+        //         document.getElementById('indicatorChart').classList.add('hidden');
+        //     }
+
+        //     // Best Parameters (Mocked)
+        //     const durations = ['1 Day', '3 Days', '1 Week', '2 Weeks', '3 Weeks'];
+        //     const parameters = durations.map(d => ({
+        //         duration: d,
+        //         rsi: Math.floor(Math.random() * 10) + 10,  // RSI period
+        //         macd: `${12 + Math.floor(Math.random() * 5)}, ${26 + Math.floor(Math.random() * 5)}, 9`, // MACD fast, slow, signal
+        //         profit: (Math.random() * 20 + 5).toFixed(2) // Mock profit percentage
+        //     }));
+        //     const paramsDiv = document.getElementById('parameters');
+        //     paramsDiv.innerHTML = parameters.map(p => `
+        //         <div>
+        //             <p class="font-semibold">${p.duration}</p>
+        //             <p>RSI: ${p.rsi} (Profit: ${p.profit}%)</p>
+        //             <p>MACD: ${p.macd} (Profit: ${p.profit}%)</p>
+        //         </div>
+        //     `).join('');
+        // }
+
+        // Fetch Stock Data from Backend API
+        async function fetchStockData(index, startDate, endDate) {
+            try {
+                // Construct the API URL with query parameters
+                // const apiUrl = new URL('http://localhost:8000/');
+                // apiUrl.searchParams.append('index', index);
+                // if (startDate) apiUrl.searchParams.append('startDate', startDate);
+                // if (endDate) apiUrl.searchParams.append('endDate', endDate);
+
+                // // Fetch data from the backend
+                // const response = await fetch(apiUrl);
+                // if (!response.ok) {
+                //     throw new Error(`HTTP error! Status: ${response.status}`);
+                // }
+                // const data = await response.json();
+                
+                const apiUrl = new URL('http://127.0.0.1:8000/');
+                apiUrl.searchParams.append('index', index);
+                if (startDate) apiUrl.searchParams.append('startDate', startDate);
+                if (endDate) apiUrl.searchParams.append('endDate', endDate);
+
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const data = await response.json();
+
+                // Update Metrics
+                document.getElementById('openPrice').textContent = data.open.toFixed(2);
+                document.getElementById('highPrice').textContent = data.high.toFixed(2);
+                document.getElementById('lowPrice').textContent = data.low.toFixed(2);
+                document.getElementById('closePrice').textContent = data.close.toFixed(2);
+                document.getElementById('volume').textContent = data.volume.toLocaleString();
+                document.getElementById('trend').textContent = data.trend;
+                document.getElementById('trend').className = `font-semibold ${data.trend === 'Bullish' ? 'text-green-500' : 'text-red-500'}`;
+
+                // Update Candlestick Chart
+                candlestickChart.updateSeries([{ data: data.candlestick }]);
+
+                // Update Indicator Chart
+                if (activeIndicator === 'RSI') {
+                    indicatorChart.updateSeries([{ name: 'RSI', data: data.rsi }]);
+                    document.getElementById('indicatorChart').classList.remove('hidden');
+                } else if (activeIndicator === 'MACD') {
+                    indicatorChart.updateSeries([{ name: 'MACD', data: data.macd }]);
+                    document.getElementById('indicatorChart').classList.remove('hidden');
+                } else {
+                    document.getElementById('indicatorChart').classList.add('hidden');
+                }
+
+                // Update Best Parameters
+                const paramsDiv = document.getElementById('parameters');
+                paramsDiv.innerHTML = data.parameters.map(p => `
+                    <div>
+                        <p class="font-semibold">${p.duration}</p>
+                        <p>RSI: ${p.rsi} (Profit: ${p.profit}%)</p>
+                        <p>MACD: ${p.macd} (Profit: ${p.profit}%)</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error fetching stock data:', error);
+                alert('Failed to fetch stock data. Please try again later.');
+            }
+        }
+
+        // Index Selection & Date Filter
+        document.getElementById('indexSelect').addEventListener('change', (e) => updateData());
+        document.getElementById('applyFilter').addEventListener('click', () => updateData());
+        function updateData() {
+            // const index = document.getElementById('indexSelect').value;
+            const index = "^NSEI"
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            fetchStockData(index, startDate, endDate);
+        }
+        fetchStockData('^NSEI'); // Initial fetch
+
+        // Indicator Toggle
+        function toggleIndicator(indicator) {
+            activeIndicator = (activeIndicator === indicator) ? null : indicator;
+            updateData();
+        }
+
+        // Update Chart Theme
+        function updateChartTheme() {
+            const mode = document.body.classList.contains('dark') ? 'dark' : 'light';
+            candlestickChart.updateOptions({ theme: { mode } });
+            indicatorChart.updateOptions({ theme: { mode } });
+        }
+
+        // Chatbot Logic
+        const chatbotToggle = document.getElementById('chatbotToggle');
+        const chatbotBox = document.getElementById('chatbotBox');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const chatSend = document.getElementById('chatSend');
+
+        chatbotToggle.addEventListener('click', () => {
+            chatbotBox.classList.toggle('hidden');
+            chatbotBox.classList.toggle('scale-0');
+        });
+
+        chatSend.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            const userMsg = document.createElement('div');
+            userMsg.className = 'text-right mb-2';
+            userMsg.innerHTML = `<span class="inline-block bg-blue-500 text-white p-2 rounded-lg">${message}</span>`;
+            chatMessages.appendChild(userMsg);
+
+            setTimeout(() => {
+                const botMsg = document.createElement('div');
+                botMsg.className = 'text-left mb-2';
+                botMsg.innerHTML = `<span class="inline-block bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white p-2 rounded-lg">For "${message}", consider RSI 14 or MACD 12,26,9...</span>`;
+                chatMessages.appendChild(botMsg);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 500);
+
+            chatInput.value = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>
