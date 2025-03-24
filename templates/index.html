@@ -196,10 +196,19 @@
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
 
         // Analytics Menu
-        const analyticsMenu = document.getElementById('analyticsMenu');
-        const analyticsDropdown = document.getElementById('analyticsDropdown');
+        // const analyticsMenu = document.getElementById('analyticsMenu');
+        // const analyticsDropdown = document.getElementById('analyticsDropdown');
+        // analyticsMenu.addEventListener('click', () => analyticsDropdown.classList.toggle('hidden'));
+
+        // Replace the existing analyticsMenu event listener with this:
         analyticsMenu.addEventListener('click', () => analyticsDropdown.classList.toggle('hidden'));
 
+// Add this code right after the above line:
+        document.addEventListener('click', (e) => {
+        if (!analyticsMenu.contains(e.target) && !analyticsDropdown.contains(e.target)) {
+            analyticsDropdown.classList.add('hidden');
+        }
+        });
         // Chart Initialization
         const candlestickOptions = {
             chart: { type: 'candlestick', height: 350, animations: { enabled: true } },
@@ -264,18 +273,55 @@
 
                 function renderTable(type) {
                     const isRSI = type === "rsi";
+                    
 
-                    const tableRows = data.parameters.map(p => `
-    <tr class="border-b">
-      <td class="py-2 px-4">${p.duration}</td>
-      <td class="py-2 px-4">${isRSI ? p.rsi : p.macd}</td>
-      <td class="py-2 px-4 text-green-600">${isRSI ? p.rsi_p_l_ratio : p.macd_p_l_ratio}%</td>
+// const tableRows = data.parameters.map((p, index) => `
+//   <tr class="border-b ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} hover:bg-blue-50 dark:hover:bg-blue-900 transition">
+//     <td class="py-2 px-4 font-medium text-gray-800 dark:text-white">${p.duration}</td>
+//     <td class="py-2 px-4 text-gray-700 dark:text-gray-300">${isRSI ? p.rsi : p.macd}</td>
+//     <td class="py-2 px-4 font-semibold ${
+//       isRSI ? 'text-green-600' : 'text-yellow-500'
+//     }">${isRSI ? p.rsi_p_l_ratio : p.macd_p_l_ratio}</td>
+//     <td class="py-2 px-4 font-semibold ${
+//       p.rsi_signal === "Buy" ? "text-green-600" :
+//       p.rsi_signal === "Sell" ? "text-red-600" :
+//       "text-gray-600 dark:text-gray-300"
+//     }">${p.rsi_signal}</td>
+//   </tr>
+// `).join('');
+
+const tableRows = data.parameters.map((p, index) => {
+  const signal = p.rsi_signal;
+  const signalClass = signal === "Buy"
+    ? "bg-green-100 text-green-500 dark:bg-green-800 dark:text-green-100"
+    : signal === "Sell"
+    ? "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-100"
+    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100";
+
+  return `
+    <tr class="border-b ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} hover:bg-blue-50 dark:hover:bg-blue-900 transition">
+      <td class="py-2 px-4 font-medium text-gray-800 dark:text-white">${p.duration}</td>
+      <td class="py-2 px-4 font-semibold text-yellow-700 dark:text-gray-300">${isRSI ? p.rsi : p.macd}</td>
+      <td class="py-2 px-4 font-semibold ${
+        isRSI ? 'text-green-600' : 'text-green-500'
+      }">${isRSI ? p.rsi_p_l_ratio : p.macd_p_l_ratio}</td>
+      <td class="py-2 px-4">
+        <span class="px-2 py-1 rounded-md text-sm font-semibold ${signalClass}">
+          ${signal}
+        </span>
+      </td>
     </tr>
-  `).join('');
+  `;
+}).join('');
+
+
 
                     const header = isRSI
                         ? `<th class="py-2 px-4 text-left">RSI</th>`
                         : `<th class="py-2 px-4 text-left">MACD</th>`;
+                    // const header_signal=isRSI
+                    //     ?`<th class="py-2 px-4 text-left">Signal</th>`
+                    //     :`<th class="py-2 px-4 text-left">Signal</th>`;
 
                     tabContent.innerHTML = `
     <div class="animate-fade-in-down">
@@ -284,7 +330,9 @@
           <tr>
             <th class="py-2 px-4 text-left">Duration</th>
             ${header}
-            <th class="py-2 px-4 text-left">Profit (%)</th>
+            <th class="py-2 px-4 text-left">Profit Ratio</th>
+            <th class="py-2 px-4 text-left">Signal</th>
+             
           </tr>
         </thead>
         <tbody class="bg-white dark:bg-gray-900 text-sm">
@@ -571,27 +619,35 @@
                 updateBotStatus(true);
 
                 try {
+                    // Show typing indicator
+                    // showTypingIndicator();
+                    updateBotStatus(true);
+                    
                     // Get current stock/index and timeframe context
                     const currentIndex = document.getElementById('indexSelect').value;
                     const currentTimeframe = document.getElementById('indexSelect1').value;
-                    console.log(currentIndex)
-                    console.log( currentTimeframe);
                     
-                    // Call the backend chat API
+                    // Add timeout to prevent hanging requests
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                    
                     const response = await fetch('http://127.0.0.1:8000/chat', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
+                        'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            message: message,
-                            context: {
-                                index: currentIndex,
-                                timeframe: currentTimeframe
-                            },
-                            conversation_id: currentConversationId
-                        })
+                        message: message,
+                        context: {
+                            index: currentIndex,
+                            timeframe: currentTimeframe
+                        },
+                        conversation_id: currentConversationId
+                        }),
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
 
                     // Remove typing indicator
                     removeTypingIndicator();
@@ -620,10 +676,16 @@
                         addBotMessage("Sorry, I'm having trouble connecting to the server. Please try again later.");
                     }
                 } catch (error) {
-                    console.error('Error sending message:', error);
-                    removeTypingIndicator();
-                    updateBotStatus(false);
-                    addBotMessage("Sorry, there was an error processing your request. Please try again.");
+                    if (error.name === 'AbortError') {
+                        addBotMessage("The request timed out. Please check your connection or try again later.");
+                    }
+                    else{
+                        console.error('Error sending message:', error);
+                        removeTypingIndicator();
+                        updateBotStatus(false);
+                        addBotMessage("Sorry, there was an error processing your request. Please try again.");
+                    }
+                    
                 }
             }
 

@@ -11,7 +11,9 @@ from typing import Dict, Any, Optional, List
 from openai import OpenAI
 import json
 from datetime import datetime
+import math
 from parameters import api_key
+
 
 warnings.filterwarnings("ignore")
 app = FastAPI()
@@ -25,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+data_response={}
 # Define request and response models
 class ChatRequest(BaseModel):
     message: str
@@ -98,15 +100,12 @@ def calculate_macd(prices, fast_period=12, slow_period=26, signal_period=9):
 
 @app.get("/", response_model=StockDataResponse)
 async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_date: Optional[str] = None, end_date: Optional[str] = None):
-async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_date: Optional[str] = None, end_date: Optional[str] = None):
     print("index",index)
     try:
         # Fetch data from Yahoo Finance
         ticker = yf.Ticker(f"{index}")  # Use .NS for NSE (Indian market)
 
         data = ticker.history(period=timeframe , interval="1d")
-
-
 
         if data.empty:
             raise HTTPException(status_code=404, detail="No data found for the given index and date range")
@@ -134,23 +133,29 @@ async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_da
         initial_rsi, avg_gain, avg_loss = calculate_initial_rsi(prices, rsi_period)
         rsi = calculate_updated_rsi(prices, avg_gain, avg_loss, rsi_period)
     
-    
-        rsi_data = [{"x": date.strftime("%Y-%m-%d"), "y": rsi[i]} for i, date in enumerate(data.index)]
-
+        rsi_data = [{"x": date.strftime("%Y-%m-%d"), "y": 0 if math.isnan(rsi[i]) else rsi[i] } for i, date in enumerate(data.index)]
+        # print(rsi_data)
         # Calculate MACD
         macd, signal = calculate_macd(data['Close'])
-        macd_data = [{"x": date.strftime("%Y-%m-%d"), "y": macd[i]} for i, date in enumerate(data.index)]
+        macd_data = [{"x": date.strftime("%Y-%m-%d"), "y": 0 if  math.isnan(macd[i]) else macd[i] } for i, date in enumerate(data.index)]
 
         # parameters = [
-        #     {"duration": "1 Day", "rsi": 14, "macd": "12,26,9", "profit": 15.5},
+        #     {"duration": "1 Day", "rsi": 14, "macd": "12,26,9", "profit": 15.5,'rsi_signal':'',"macd_signal":""},
         #     {"duration": "3 Days", "rsi": 14, "macd": "12,26,9", "profit": 18.2}
         # ]
         with open('data/parameters.json', 'r') as f:
             parameters = json.load(f)
+        signal_list=["Buy","Sell","Hold","Buy","Hold","Hold","Buy","Sell","Hold","Buy"]
+        signal_i=1
+        for row in parameters:
+            row["rsi_signal"] = signal_list[signal_i%10]
+            row["macd_signal"] = signal_list[signal_i%5] 
+            signal_i=signal_i+1
+
         # print("parameters",type(parameters),type(parameters[0]))
         
         # Return the response
-        return {
+        final_response={
             "open": open_price,
             "high": high_price,
             "low": low_price,
@@ -162,10 +167,14 @@ async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_da
             "macd": macd_data,
             "parameters": parameters
         }
+        with open("response_data.json","w") as file:
+            json.dump(final_response,file,indent=4)
+
+        data_response=final_response
+        return final_response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         # print("error",str(e))
-
 
 # Configure OpenAI client
 # In production, use environment variables for API keys
@@ -227,18 +236,15 @@ Answer questions directly without unnecessary elaboration
 Maintain a conversational, natural tone
 Structure responses in an organized format
 Keep messages brief and focused
-Leave proper space in the text 
-maximum 4 lines only.
+Leave proper space in the text response 
+response should be maximum 3 lines only.
 
 Your job is to help users understand technical analysis concepts, interpret the current chart data, 
 and make informed decisions. Be concise, accurate, and educational.
 
 {additional_context}
 """
-# @app.post("/chat", response_model=ChatResponse)
-# def chat(request: ChatRequest=Body(...)):
-#     print(request)
-#     return {"response":"thanks for calling","conversation_id":"01"}
+
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest = Body(...)):
@@ -251,27 +257,57 @@ async def chat(request: ChatRequest = Body(...)):
         conversation_id = request.conversation_id or datetime.now().strftime("%Y%m%d%H%M%S")
         print(1)
         # Get current market data if context is provided
-        market_data = None
-        if request.context and "index" in request.context and "timeframe" in request.context:
-            market_data = await get_current_market_data(
-                request.context["index"], 
-                request.context["timeframe"]
-            )
+        # market_data = data_response
+        # if request.context and "index" in request.context and "timeframe" in request.context:
+        #     market_data = await get_current_market_data(
+        #         request.context["index"], 
+        #         request.context["timeframe"]
+        #     )
         print(2)
+        with open("response_data.json",'r') as file:
+            market_data=json.load(file)
         
         # Build additional context based on market data
         additional_context = ""
+        # if market_data:
+        #     additional_context = f"""
+        #     Current market context:
+        #     - Index: {market_data['index']}
+        #     - Timeframe: {market_data['timeframe']}
+        #     - Current Price: {market_data['current_price']}
+        #     - Current Trend: {market_data['trend']}
+        #     - Current RSI: {market_data['rsi_value']}
+        #     - Current MACD: {market_data['macd_value']}
+        #     """
+        # print(market_data)
         if market_data:
-            additional_context = f"""
-Current market context:
-- Index: {market_data['index']}
-- Timeframe: {market_data['timeframe']}
-- Current Price: {market_data['current_price']}
-- Current Trend: {market_data['trend']}
-- Current RSI: {market_data['rsi_value']}
-- Current MACD: {market_data['macd_value']}
-            """
-        print(additional_context)
+            additional_context = "Current market context:\n"
+            if 'index' in market_data:
+                additional_context += f"- Index: {market_data['index']}\n - Timeframe: 1 day"
+            else:
+                additional_context +="Index: Nifty 50\n - Timeframe: 1 day"
+
+            if 'open' in market_data:
+                additional_context += f"- open: {market_data['open']}\n"
+            if 'high' in market_data:
+                additional_context += f"- high: {market_data['high']}\n"
+            if 'low' in market_data:
+                additional_context += f"- low: {market_data['low']}\n"
+            if 'close' in market_data:
+                additional_context += f"- close: {market_data['close']}\n"
+            if 'trend' in market_data:
+                additional_context += f"- trend: {market_data['trend']}\n"
+            if 'candlestick' in market_data:
+                additional_context+= f"index CandleStick data:\n{market_data['candlestick']}\n"
+            if 'rsi' in market_data:
+                additional_context+= f"Rsi data:\n{market_data['rsi']}\n"
+            if 'macd' in market_data:
+                additional_context+= f"Macd data:\n{market_data['macd']}\n"
+            if "parameters" in market_data:
+                additional_context+=f"Best parameters of RSI indicators and Macd indicators for a various duration with current signal recommendation:\n{market_data['parameters']}"
+
+
+        # print(additional_context)
         print(3)
         # Initialize or retrieve conversation history
         if conversation_id not in conversations:
@@ -283,7 +319,7 @@ Current market context:
         conversations[conversation_id].append({"role": "user", "content": request.message})
         
         # Keep only the last 10 messages to avoid token limits
-        if len(conversations[conversation_id]) > 12:  # system prompt + 10 messages
+        if len(conversations[conversation_id]) > 10:  # system prompt + 10 messages
             # Always keep the system prompt (first message)
             conversations[conversation_id] = [
                 conversations[conversation_id][0]
@@ -298,15 +334,15 @@ Current market context:
         # )
         # print(conversations[conversation_id])
 
-        # response = client.chat.completions.create(
-        #             model="gpt-4o-mini",
-        #             messages=conversations[conversation_id]
-        #         )
+        response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=conversations[conversation_id]
+                )
         
-        # assistant_message = response.choices[0].message.content
+        assistant_message = response.choices[0].message.content
         print(5)
         # Extract and store the assistant's response
-        assistant_message ="thank you.."
+        # assistant_message ="thank you.."
         conversations[conversation_id].append({"role": "assistant", "content": assistant_message})
         
         return {
