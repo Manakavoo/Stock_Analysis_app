@@ -98,6 +98,7 @@ def calculate_macd(prices, fast_period=12, slow_period=26, signal_period=9):
 
 @app.get("/", response_model=StockDataResponse)
 async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_date: Optional[str] = None, end_date: Optional[str] = None):
+async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_date: Optional[str] = None, end_date: Optional[str] = None):
     print("index",index)
     try:
         # Fetch data from Yahoo Finance
@@ -132,6 +133,7 @@ async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_da
         # rsi = calculate_rsi(data['Close'].values)
         initial_rsi, avg_gain, avg_loss = calculate_initial_rsi(prices, rsi_period)
         rsi = calculate_updated_rsi(prices, avg_gain, avg_loss, rsi_period)
+    
     
         rsi_data = [{"x": date.strftime("%Y-%m-%d"), "y": rsi[i]} for i, date in enumerate(data.index)]
 
