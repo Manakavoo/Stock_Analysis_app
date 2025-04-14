@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 import warnings
 import json
-from fastapi import FastAPI, Body, HTTPException, Depends
+from fastapi import FastAPI, Body, HTTPException, Depends 
+from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional, List
 from openai import OpenAI
 import json
@@ -97,6 +98,12 @@ def calculate_macd(prices, fast_period=12, slow_period=26, signal_period=9):
     signal = macd.ewm(span=signal_period, adjust=False).mean()
     # print("macd type:",type(macd),type(signal))
     return macd.round(2), signal
+
+@app.head("/")
+def head_root():
+    # Simulate the headers you'd normally return in your GET request
+    response = JSONResponse(content={}, status_code=200)
+    return response
 
 @app.get("/", response_model=StockDataResponse)
 async def get_all_data(index: str = "^NSEI",timeframe: str = '6mo' ):#, start_date: Optional[str] = None, end_date: Optional[str] = None):

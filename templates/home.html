@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Market Technical Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        .dark ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        @keyframes fade-in-down {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-down {
+            animation: fade-in-down 0.4s ease-out;
+        }
+        
+        .select-caret {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        
+        .dark .select-caret {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Navbar -->
+    <nav class="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <h1 class="text-xl font-bold text-gray-800 dark:text-white">Market Insights</h1>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
+                <div class="relative w-full sm:w-48">
+                    <select id="indexSelect" title="select-index" name="index" class="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 select-caret focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="^NSEI">NIFTY 50</option>
+                        <option value="^BSESN">SENSEX</option>
+                    </select>
+                </div>
+                
+                <div class="relative w-full sm:w-48">
+                    <input type="text" id="symbolInput"
+                        class="w-full p-2 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter Stock Symbol">
+                </div>
+                
+                <div class="relative inline-block text-left">
+                    <button id="analyticsMenu"
+                        class="inline-flex items-center justify-between w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        Analytics
+                        <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                  
+                    <div id="analyticsDropdown"
+                        class="hidden absolute right-0 mt-2 w-48 origin-top-right bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-20 border border-gray-200 dark:border-gray-700">
+                        <div class="py-1">
+                            <button onclick="toggleIndicator('RSI')"
+                                class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                RSI
+                            </button>
+                            <button onclick="toggleIndicator('MACD')"
+                                class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                                </svg>
+                                MACD
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="themeToggle" title="toggle-theme" class="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                    <span class="dark:hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    </span>
+                    <span class="hidden dark:inline">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart Section -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Technical Chart</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" id="chartSubtitle">Interactive price chart with technical indicators</p>
+                </div>
+                <div class="flex space-x-2">
+                    <div class="relative">
+                        <select id="indexSelect1" title="select-index" class="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 select-caret focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="1mo">1 month</option>
+                            <option value="3mo" selected>3 months</option>
+                            <option value="6mo">6 months</option>
+                            <option value="1y">1 year</option>
+                            <option value="2y">2 years</option>
+                            <option value="5y">5 years</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div id="stockChart" class="w-full h-96"></div>
+            <div id="indicatorChart" class="w-full h-48 mt-6 hidden"></div>
+        </div>
+
+        <!-- Metrics & Parameters Section -->
+        <div class="space-y-6">
+            <!-- Parameters Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Technical Indicators</h2>
+                
+                <!-- Tabs -->
+                <div class="flex space-x-2 mb-4 border-b border-gray-200 dark:border-gray-700">
+                    <button id="rsi-tab" class="tab-btn font-medium text-sm px-4 py-2 rounded-t-lg bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 border-b-2 border-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        RSI
+                    </button>
+                    <button id="macd-tab" class="tab-btn font-medium text-sm px-4 py-2 rounded-t-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                        </svg>
+                        MACD
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
+                <div id="tab-content" class="transition-all duration-300">
+                    <!-- Content will be injected here -->
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p>Select an indicator to view analysis</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Key Metrics</h2>
+                <div id="metrics" class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Open</p>
+                        <p class="text-lg font-semibold text-gray-800 dark:text-white" id="openPrice">-</p>
+                    </div>
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">High</p>
+                        <p class="text-lg font-semibold text-gray-800 dark:text-white" id="highPrice">-</p>
+                    </div>
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Low</p>
+                        <p class="text-lg font-semibold text-gray-800 dark:text-white" id="lowPrice">-</p>
+                    </div>
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Close</p>
+                        <p class="text-lg font-semibold text-gray-800 dark:text-white" id="closePrice">-</p>
+                    </div>
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Volume</p>
+                        <p class="text-lg font-semibold text-gray-800 dark:text-white" id="volume">-</p>
+                    </div>
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Trend</p>
+                        <p class="text-lg font-semibold" id="trend">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chatbot -->
+    <div id="chatbotContainer" class="fixed bottom-6 right-6 z-20">
+        <button id="chatbotToggle" title="toggle-chatbot"
+            class="bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition flex items-center justify-center w-14 h-14">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+        </button>
+        <!-- <div id="chatbotBox"
+            class="hidden absolute bottom-20 right-0 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 transform transition-all duration-300 scale-0 origin-bottom-right">
+             -->
+             <div id="chatbotBox"
+             class="hidden absolute bottom-20 right-0 w-96 bg-blue-100 dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 transform transition-all duration-300 scale-0 origin-bottom-right">
+            <div class="flex justify-between items-center mb-3 pb-2 border-b dark:border-gray-700">
+                <div class="flex items-center">
+                    <h3 class="font-bold text-lg text-gray-800 dark:text-white">Analysis Assistant</h3>
+                    <span id="botStatus" class="ml-2 w-2 h-2 bg-green-500 rounded-full"></span>
+                </div>
+                <button id="chatbotClose" title="close-chatbot" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="h-64 overflow-y-auto mb-4 p-2" id="chatMessages"></div>
+            <div class="flex space-x-2">
+                <input id="chatInput" type="text"
+                    class="flex-1 p-2 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ask about technicals...">
+                <button id="chatSend" title="send-message" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                </button>
+            </div>
+            <div class="mt-2 text-center pt-2 border-t dark:border-gray-700 flex justify-between text-xs">
+                <button id="clearChat" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    Clear conversation
+                </button>
+                <button id="newChat" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200">
+                    New conversation
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+            updateChartTheme();
+        });
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
+
+        // Analytics Menu
+        const analyticsMenu = document.getElementById('analyticsMenu');
+        const analyticsDropdown = document.getElementById('analyticsDropdown');
+        
+        analyticsMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            analyticsDropdown.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!analyticsMenu.contains(e.target) && !analyticsDropdown.contains(e.target)) {
+                analyticsDropdown.classList.add('hidden');
+            }
+        });
+
+        // Chart Initialization
+        const candlestickOptions = {
+            chart: { 
+                type: 'candlestick', 
+                height: 350, 
+                animations: { enabled: true },
+                toolbar: {
+                    show: true,
+                    tools: {
+                        download: true,
+                        selection: true,
+                        zoom: true,
+                        zoomin: true,
+                        zoomout: true,
+                        pan: true,
+                        reset: true
+                    }
+                },
+                zoom: {
+                    enabled: true
+                }
+            },
+            series: [{ data: [] }],
+            xaxis: { 
+                type: 'datetime',
+                labels: {
+                    style: {
+                        colors: '#6b7280',
+                        fontSize: '12px'
+                    }
+                }
+            },
+            yaxis: { 
+                tooltip: { enabled: true },
+                labels: {
+                    style: {
+                        colors: '#6b7280',
+                        fontSize: '12px'
+                    },
+                    formatter: function(value) {
+                        return value.toFixed(2);
+                    }
+                }
+            },
+            grid: {
+                borderColor: '#e5e7eb',
+                strokeDashArray: 4
+            },
+            tooltip: {
+                enabled: true,
+                theme: document.body.classList.contains('dark') ? 'dark' : 'light'
+            },
+            theme: { mode: document.body.classList.contains('dark') ? 'dark' : 'light' }
+        };
+        
+        const indicatorOptions = {
+            chart: { 
+                type: 'line', 
+                height: 200, 
+                animations: { enabled: true },
+                toolbar: {
+                    show: false
+                }
+            },
+            series: [],
+            xaxis: { 
+                type: 'datetime',
+                labels: {
+                    style: {
+                        colors: '#6b7280',
+                        fontSize: '12px'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: {
+                        colors: '#6b7280',
+                        fontSize: '12px'
+                    }
+                }
+            },
+            grid: {
+                borderColor: '#e5e7eb',
+                strokeDashArray: 4
+            },
+            tooltip: {
+                enabled: true,
+                theme: document.body.classList.contains('dark') ? 'dark' : 'light'
+            },
+            theme: { mode: document.body.classList.contains('dark') ? 'dark' : 'light' }
+        };
+        
+        const candlestickChart = new ApexCharts(document.querySelector("#stockChart"), candlestickOptions);
+        const indicatorChart = new ApexCharts(document.querySelector("#indicatorChart"), indicatorOptions);
+        candlestickChart.render();
+        indicatorChart.render();
+
+        let activeIndicator = null;
+
+        // Fetch Stock Data from Backend API
+        async function fetchStockData(index, timeframe) {
+            try {
+                const apiUrl = new URL('http://127.0.0.1:8000/');
+                apiUrl.searchParams.append('index', index);
+
+                if (timeframe) apiUrl.searchParams.append('timeframe', timeframe);
+
+                // Update chart subtitle
+                document.getElementById('chartSubtitle').textContent = `Loading data for ${index}...`;
+                
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const data = await response.json();
+
+                // Update Metrics
+                document.getElementById('openPrice').textContent = data.open.toFixed(2);
+                document.getElementById('highPrice').textContent = data.high.toFixed(2);
+                document.getElementById('lowPrice').textContent = data.low.toFixed(2);
+                document.getElementById('closePrice').textContent = data.close.toFixed(2);
+                document.getElementById('volume').textContent = data.volume.toLocaleString();
+                
+                const trendElement = document.getElementById('trend');
+                trendElement.textContent = data.trend;
+                trendElement.className = `text-lg font-semibold ${data.trend === 'Bullish' ? 'text-green-500' : 'text-red-500'}`;
+
+                // Update Chart subtitle with current symbol and timeframe
+                const timeframeText = {
+                    '1mo': '1 month',
+                    '3mo': '3 months',
+                    '6mo': '6 months',
+                    '1y': '1 year',
+                    '2y': '2 years',
+                    '5y': '5 years'
+                }[timeframe] || timeframe;
+                
+                document.getElementById('chartSubtitle').textContent = `${index} - ${timeframeText} timeframe`;
+
+                // Update Candlestick Chart
+                candlestickChart.updateSeries([{ data: data.candlestick }]);
+
+                // Update Indicator Chart
+                if (activeIndicator === 'RSI') {
+                    indicatorChart.updateOptions({
+                        series: [{ name: 'RSI', data: data.rsi }],
+                        colors: ['#F59E0B'],
+                        markers: {
+                            size: 0
+                        },
+                        stroke: {
+                            width: 2
+                        }
+                    });
+                    document.getElementById('indicatorChart').classList.remove('hidden');
+                } else if (activeIndicator === 'MACD') {
+                    indicatorChart.updateOptions({
+                        series: [{ name: 'MACD', data: data.macd }],
+                        colors: ['#3B82F6'],
+                        markers: {
+                            size: 0
+                        },
+                        stroke: {
+                            width: 2
+                        }
+                    });
+                    document.getElementById('indicatorChart').classList.remove('hidden');
+                } else {
+                    document.getElementById('indicatorChart').classList.add('hidden');
+                }
+
+                // Handle Parameters Table
+                const rsiTab = document.getElementById("rsi-tab");
+                const macdTab = document.getElementById("macd-tab");
+                const tabContent = document.getElementById("tab-content");
+
+                function renderTable(type) {
+                    const isRSI = type === "rsi";
+                    
+                    const tableRows = data.parameters.map((p, index) => {
+                        const signal = p.rsi_signal;
+                        const signalClass = signal === "Buy"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : signal === "Sell"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+
+                        return `
+                            <tr class="border-b ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} hover:bg-blue-50 dark:hover:bg-blue-900/30 transition">
+                                <td class="py-3 px-4 font-medium text-gray-800 dark:text-white">${p.duration}</td>
+                                <td class="py-3 px-4 font-semibold ${isRSI ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400'}">${isRSI ? p.rsi : p.macd}</td>
+                                <td class="py-3 px-4 font-semibold ${isRSI ? 'text-green-600 dark:text-green-400' : 'text-green-600 dark:text-green-400'}">${isRSI ? p.rsi_p_l_ratio : p.macd_p_l_ratio}</td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-1 rounded-md text-xs font-semibold ${signalClass}">
+                                        ${signal}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    tabContent.innerHTML = `
+                        <div class="animate-fade-in-down overflow-x-auto">
+                            <table class="w-full table-auto border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden text-sm">
+                                <thead class="bg-gray-100 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="py-2 px-4 text-left">Duration</th>
+                                        <th class="py-2 px-4 text-left">${isRSI ? 'RSI' : 'MACD'}</th>
+                                        <th class="py-2 px-4 text-left">Profit Ratio</th>
+                                        <th class="py-2 px-4 text-left">Signal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                // Initial render if parameters exist
+                if (data.parameters && data.parameters.length > 0) {
+                    renderTable("rsi");
+                } else {
+                    tabContent.innerHTML = `
+                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p>No indicator data available for this selection</p>
+                        </div>
+                    `;
+                }
+
+                // Tab switching
+                rsiTab.addEventListener("click", () => {
+                    rsiTab.classList.remove("text-gray-600", "dark:text-gray-400");
+                    rsiTab.classList.add("bg-blue-50", "dark:bg-gray-700", "text-blue-600", "dark:text-blue-400", "border-b-2", "border-blue-500");
+                    macdTab.classList.remove("bg-blue-50", "dark:bg-gray-700", "text-blue-600", "dark:text-blue-400", "border-b-2", "border-blue-500");
+                    macdTab.classList.add("text-gray-600", "dark:text-gray-400");
+                    if (data.parameters && data.parameters.length > 0) {
+                        renderTable("rsi");
+                    }
+                });
+
+                macdTab.addEventListener("click", () => {
+                    macdTab.classList.remove("text-gray-600", "dark:text-gray-400");
+                    macdTab.classList.add("bg-blue-50", "dark:bg-gray-700", "text-blue-600", "dark:text-blue-400", "border-b-2", "border-blue-500");
+                    rsiTab.classList.remove("bg-blue-50", "dark:bg-gray-700", "text-blue-600", "dark:text-blue-400", "border-b-2", "border-blue-500");
+                    rsiTab.classList.add("text-gray-600", "dark:text-gray-400");
+                    if (data.parameters && data.parameters.length > 0) {
+                        renderTable("macd");
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error fetching stock data:', error);
+                document.getElementById('chartSubtitle').textContent = `Error loading data`;
+                
+                // Show error in metrics
+                const errorText = 'Error';
+                document.getElementById('openPrice').textContent = errorText;
+                document.getElementById('highPrice').textContent = errorText;
+                document.getElementById('lowPrice').textContent = errorText;
+                document.getElementById('closePrice').textContent = errorText;
+                document.getElementById('volume').textContent = errorText;
+                document.getElementById('trend').textContent = errorText;
+                document.getElementById('trend').className = "text-lg font-semibold text-gray-500";
+                
+                // Show error in tab content
+                document.getElementById('tab-content').innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <p>Failed to fetch data. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Index Selection & Timeframe Filter
+        document.getElementById('indexSelect').addEventListener('change', (e) => updateData());
+        document.getElementById('indexSelect1').addEventListener('change', (e) => updateData());
+        
+        function updateData() {
+            const index = document.getElementById('indexSelect').value;
+            const timeframe = document.getElementById('indexSelect1').value;
+            fetchStockData(index, timeframe);
+        }
+
+        // Initial data load
+        updateData();
+
+        // Indicator Toggle
+        function toggleIndicator(indicator) {
+            activeIndicator = (activeIndicator === indicator) ? null : indicator;
+updateData();
+        // Update active tab UI
+        if (activeIndicator === 'RSI') {
+            document.getElementById('rsi-tab').classList.add('bg-blue-50', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-400', 'border-b-2', 'border-blue-500');
+            document.getElementById('rsi-tab').classList.remove('text-gray-600', 'dark:text-gray-400');
+            document.getElementById('macd-tab').classList.remove('bg-blue-50', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-400', 'border-b-2', 'border-blue-500');
+            document.getElementById('macd-tab').classList.add('text-gray-600', 'dark:text-gray-400');
+        } else if (activeIndicator === 'MACD') {
+            document.getElementById('macd-tab').classList.add('bg-blue-50', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-400', 'border-b-2', 'border-blue-500');
+            document.getElementById('macd-tab').classList.remove('text-gray-600', 'dark:text-gray-400');
+            document.getElementById('rsi-tab').classList.remove('bg-blue-50', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-400', 'border-b-2', 'border-blue-500');
+            document.getElementById('rsi-tab').classList.add('text-gray-600', 'dark:text-gray-400');
+        } else {
+            document.getElementById('rsi-tab').classList.remove('bg-blue-50', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-400', 'border-b-2', 'border-blue-500');
+            document.getElementById('rsi-tab').classList.add('text-gray-600', 'dark:text-gray-400');
+            document.getElementById('macd-tab').classList.remove('bg-blue-50', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-400', 'border-b-2', 'border-blue-500');
+            document.getElementById('macd-tab').classList.add('text-gray-600', 'dark:text-gray-400');
+        }
+    }
+
+    // Update Chart Theme
+    function updateChartTheme() {
+        const mode = document.body.classList.contains('dark') ? 'dark' : 'light';
+        candlestickChart.updateOptions({ 
+            theme: { mode },
+            tooltip: { theme: mode }
+        });
+        indicatorChart.updateOptions({ 
+            theme: { mode },
+            tooltip: { theme: mode }
+        });
+    }
+
+    // Enhanced Chatbot with OpenAI Backend Integration
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get chatbot elements
+        const chatbotToggle = document.getElementById('chatbotToggle');
+        const chatbotBox = document.getElementById('chatbotBox');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const chatSend = document.getElementById('chatSend');
+        const chatbotClose = document.getElementById('chatbotClose');
+        const clearChat = document.getElementById('clearChat');
+        const newChat = document.getElementById('newChat');
+
+        // Conversation tracking
+        let currentConversationId = null;
+        let messageHistory = [];
+
+        // Initialize chatbot
+        function initChatbot() {
+            // Add welcome message if chat is empty
+            if (chatMessages.children.length === 0) {
+                addBotMessage("👋 Welcome to your Technical Analysis Assistant! I can help you understand market indicators and interpret chart data. What would you like to know?");
+                
+                // Suggested questions for easy starting
+                addSuggestedQuestions([
+                    "What does the current RSI indicate?",
+                    "Explain MACD crossovers",
+                    "Is the current trend likely to continue?",
+                    "How do I interpret this candlestick pattern?"
+                ]);
+            }
+        }
+
+        // Add suggested questions buttons
+        function addSuggestedQuestions(questions) {
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'flex flex-wrap gap-2 mb-4';
+
+            questions.forEach(question => {
+                const button = document.createElement('button');
+                button.className = 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs px-3 py-1.5 rounded-full hover:bg-blue-100 dark:hover:bg-gray-600 transition-colors';
+                button.textContent = question;
+                button.addEventListener('click', () => {
+                    chatInput.value = question;
+                    sendUserMessage();
+                });
+                suggestionsDiv.appendChild(button);
+            });
+
+            chatMessages.appendChild(suggestionsDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Toggle chatbot visibility with animation
+        chatbotToggle.addEventListener('click', () => {
+            chatbotBox.classList.toggle('hidden');
+            setTimeout(() => {
+                chatbotBox.classList.toggle('scale-0');
+            }, 10);
+            
+            if (!chatbotBox.classList.contains('hidden')) {
+                initChatbot();
+            }
+        });
+
+        // Close chatbot
+        chatbotClose.addEventListener('click', () => {
+            chatbotBox.classList.add('hidden', 'scale-0');
+        });
+
+        // Add user message to chat
+        function addUserMessage(message) {
+            const userMsg = document.createElement('div');
+            userMsg.className = 'text-right mb-3 animate-fade-in-down';
+            userMsg.innerHTML = `
+                <div class="inline-flex items-end max-w-xs lg:max-w-md">
+                    <div class="bg-blue-500 text-white px-4 py-2 rounded-lg rounded-br-none">
+                        ${message}
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 -ml-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+            `;
+            chatMessages.appendChild(userMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Add to message history
+            messageHistory.push({ role: 'user', content: message });
+        }
+
+        // Add bot message to chat
+        function addBotMessage(message) {
+            const botMsg = document.createElement('div');
+            botMsg.className = 'text-left mb-3 animate-fade-in-down';
+            botMsg.innerHTML = `
+                <div class="inline-flex items-start max-w-xs lg:max-w-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 -mr-1 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg rounded-bl-none">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(botMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Add to message history
+            messageHistory.push({ role: 'assistant', content: message });
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            const typingIndicator = document.createElement('div');
+            typingIndicator.id = 'typingIndicator';
+            typingIndicator.className = 'text-left mb-3';
+            typingIndicator.innerHTML = `
+                <div class="inline-flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 -mr-1 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg rounded-bl-none">
+                        <span class="typing-dot">.</span>
+                        <span class="typing-dot">.</span>
+                        <span class="typing-dot">.</span>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingIndicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Add animation for typing dots
+            if (!document.getElementById('typingAnimation')) {
+                const style = document.createElement('style');
+                style.id = 'typingAnimation';
+                style.innerHTML = `
+                    @keyframes typing {
+                        0% { opacity: 0.3; }
+                        50% { opacity: 1; }
+                        100% { opacity: 0.3; }
+                    }
+                    .typing-dot {
+                        animation: typing 1s infinite;
+                        animation-fill-mode: both;
+                    }
+                    .typing-dot:nth-child(2) {
+                        animation-delay: 0.2s;
+                    }
+                    .typing-dot:nth-child(3) {
+                        animation-delay: 0.4s;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+
+        // Remove typing indicator
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Update bot status (online/offline)
+        function updateBotStatus(isOnline) {
+            const statusIndicator = document.getElementById('botStatus');
+            if (statusIndicator) {
+                statusIndicator.className = isOnline
+                    ? 'ml-2 w-2 h-2 bg-green-500 rounded-full'
+                    : 'ml-2 w-2 h-2 bg-red-500 rounded-full';
+            }
+        }
+
+        // Send user message and get response from backend
+        async function sendUserMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message to chat
+            addUserMessage(message);
+            chatInput.value = '';
+
+            // Show typing indicator
+            showTypingIndicator();
+            updateBotStatus(true);
+
+            try {
+                // Get current stock/index and timeframe context
+                const currentIndex = document.getElementById('indexSelect').value;
+                const currentTimeframe = document.getElementById('indexSelect1').value;
+                
+                // Add timeout to prevent hanging requests
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch('http://127.0.0.1:8000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        context: {
+                            index: currentIndex,
+                            timeframe: currentTimeframe
+                        },
+                        conversation_id: currentConversationId,
+                        message_history: messageHistory.slice(-6) // Send last 3 exchanges
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+
+                // Remove typing indicator
+                removeTypingIndicator();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    currentConversationId = data.conversation_id;
+                    addBotMessage(data.response);
+
+                    // Add follow-up suggestions based on context
+                    if (message.toLowerCase().includes('rsi')) {
+                        addSuggestedQuestions([
+                            "What RSI values indicate overbought?",
+                            "How reliable is RSI for this timeframe?",
+                            "Show me RSI divergence patterns"
+                        ]);
+                    } else if (message.toLowerCase().includes('macd')) {
+                        addSuggestedQuestions([
+                            "Explain MACD histogram",
+                            "When to use MACD with other indicators?",
+                            "Is MACD showing any signal now?"
+                        ]);
+                    } else if (message.toLowerCase().includes('trend')) {
+                        addSuggestedQuestions([
+                            "What confirms a trend reversal?",
+                            "Best indicators for trend following?",
+                            "How to trade with the trend?"
+                        ]);
+                    }
+                } else {
+                    updateBotStatus(false);
+                    addBotMessage("Sorry, I'm having trouble connecting to the server. Please try again later.");
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    addBotMessage("The request timed out. Please check your connection or try again later.");
+                }
+                else {
+                    console.error('Error sending message:', error);
+                    removeTypingIndicator();
+                    updateBotStatus(false);
+                    addBotMessage("Sorry, there was an error processing your request. Please try again.");
+                }
+            }
+        }
+
+        // Clear chat functionality
+        clearChat.addEventListener('click', () => {
+            // If we have a conversation ID, call the clear endpoint
+            if (currentConversationId) {
+                fetch(`http://127.0.0.1:8000/chat/${currentConversationId}`, {
+                    method: 'DELETE'
+                }).catch(error => console.error('Error clearing conversation:', error));
+            }
+
+            chatMessages.innerHTML = '';
+            messageHistory = [];
+            currentConversationId = null;
+            
+            // Show welcome message again
+            initChatbot();
+        });
+
+        // New conversation functionality
+        newChat.addEventListener('click', () => {
+            currentConversationId = null;
+            messageHistory = [];
+            chatMessages.innerHTML = '';
+            
+            addBotMessage("Starting a new conversation. How can I help with your technical analysis today?");
+
+            // Add initial suggested questions
+            addSuggestedQuestions([
+                "How do I use this app?",
+                "What's the difference between RSI and MACD?",
+                "What indicators work best for day trading?"
+            ]);
+        });
+
+        // Send message on button click or Enter key
+        chatSend.addEventListener('click', sendUserMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendUserMessage();
+        });
+
+        // Initialize chatbot on first load
+        initChatbot();
+    });
+</script>
